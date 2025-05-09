@@ -1,0 +1,53 @@
+# .envや秘密情報
+*.env
+.env.*
+
+# Node.js (hw-front)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js (hw-front)
+.next/
+out/
+dist/
+
+# キャッシュ・一時ファイル
+.cache/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# OS依存
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# Ruby (hw-back)
+*.gem
+*.rbc
+.bundle/
+vendor/bundle/
+log/
+tmp/
+coverage/
+spec/reports/
+test/tmp/
+test/version_tmp/
+tmp/
+.byebug_history
+
+# Puma/Sinatra
+puma.pid
+puma.state
+
+# その他
+*.log
+*.pid
+
+# Git自身
+.git/
