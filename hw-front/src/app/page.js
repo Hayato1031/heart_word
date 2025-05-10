@@ -6,7 +6,7 @@ const Sketch = dynamic(() => import('react-p5'), { ssr: false });
 export default function Home() {
   const [smoothness, setSmoothness] = useState(0);
   const [angle, setAngle] = useState(0);
-  const [flashProb, setFlashProb] = useState(1); // 1~100
+  const [flashProb, setFlashProb] = useState(0); // 1~100
   const [isFlashing, setIsFlashing] = useState(false);
   const flashRef = useRef(false);
   const [canvasSize, setCanvasSize] = useState({ w: 400, h: 400 });
@@ -16,7 +16,7 @@ export default function Home() {
   const [echoHistory, setEchoHistory] = useState([]);
   const [corrosionHistory, setCorrosionHistory] = useState([]);
   const [gptResponse, setGptResponse] = useState("");
-  const [virtueResult, setVirtueResult] = useState({ message: '', result: null, pending: false });
+  const [virtueResult, setVirtueResult] = useState(null);
 
   // ウィンドウリサイズでcanvasサイズを更新
   useEffect(() => {
@@ -295,7 +295,7 @@ export default function Home() {
               animationDelay: `${i * 0.07}s`,
             }}>{`id=${wsMessages.length - i} `}{msg}</div>
           ))
-        ) : <span style={{color:'#888'}}>ここにメッセージが表示されます</span>}
+        ) : <span style={{color:'#888'}}>Messages will appear here</span>}
         <style>{`
           @keyframes fadein-msg {
             from { opacity: 0; transform: translateY(16px); }
@@ -324,7 +324,7 @@ export default function Home() {
       }}>
         {wsMessages.length > 0 ? (
           <div style={{marginBottom: 4, wordBreak: 'break-word'}}>{`User: ${wsMessages[wsMessages.length-1]}`}</div>
-        ) : <span style={{color:'#888'}}>ここにメッセージが表示されます</span>}
+        ) : <span style={{color:'#888'}}>Messages will appear here</span>}
       </div>
       <Sketch setup={setup} draw={draw} windowResized={windowResized} />
       {/* <div style={{marginTop: 20, color: '#fff', fontFamily: 'sans-serif', textAlign: 'center'}}>
@@ -432,46 +432,46 @@ export default function Home() {
           flexDirection: 'column',
           padding: '10px 0',
         }}>
-          {virtueResult && virtueResult.message !== undefined ? (
-            virtueResult.pending ? (
-              <>
-                <div style={{
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                  marginBottom: 8,
-                  maxWidth: '90%',
-                  textAlign: 'center',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>{virtueResult.message && virtueResult.message !== '' ? virtueResult.message : '（メッセージ不明）'}</div>
-                <div style={{marginTop: 4, fontSize: 16}}>判定中…</div>
-              </>
-            ) : virtueResult.result && virtueResult.result.echo != null && virtueResult.result.corrosion != null ? (
-              <>
-                <div style={{
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                  marginBottom: 18,
-                  maxWidth: '90%',
-                  textAlign: 'center',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>{virtueResult.message && virtueResult.message !== '' ? virtueResult.message : '（メッセージ不明）'}</div>
-                <div style={{
-                  width: 40,
-                  height: 2,
-                  background: '#fff',
-                  borderRadius: 2,
-                  margin: '0 auto 12px auto',
-                }} />
-                <div style={{marginTop: 8}}>echo: {virtueResult.result.echo} / corrosion: {virtueResult.result.corrosion}</div>
-              </>
-            ) : (
-              <div style={{color: '#ffbaba', fontWeight: 'bold'}}>エラー: echo/corrosionの値が取得できませんでした</div>
-            )
-          ) : '善性判定待ち...'}
+          {!virtueResult ? (
+            <div style={{color: '#fff', fontWeight: 'bold'}}>Waiting for virtue evaluation...</div>
+          ) : virtueResult.pending ? (
+            <>
+              <div style={{
+                fontWeight: 'bold',
+                fontSize: 16,
+                marginBottom: 8,
+                maxWidth: '90%',
+                textAlign: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>{virtueResult.message && virtueResult.message !== '' ? virtueResult.message : '(Unknown message)'}</div>
+              <div style={{marginTop: 4, fontSize: 16}}>Evaluating...</div>
+            </>
+          ) : virtueResult.result && virtueResult.result.echo != null && virtueResult.result.corrosion != null ? (
+            <>
+              <div style={{
+                fontWeight: 'bold',
+                fontSize: 16,
+                marginBottom: 18,
+                maxWidth: '90%',
+                textAlign: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>{virtueResult.message && virtueResult.message !== '' ? virtueResult.message : '(Unknown message)'}</div>
+              <div style={{
+                width: 40,
+                height: 2,
+                background: '#fff',
+                borderRadius: 2,
+                margin: '0 auto 12px auto',
+              }} />
+              <div style={{marginTop: 8}}>echo: {virtueResult.result.echo} / corrosion: {virtueResult.result.corrosion}</div>
+            </>
+          ) : (
+            <div style={{color: '#ff1744', fontWeight: 'bold', textShadow: '0 0 6px #ff1744'}}>Error: Failed to get echo/corrosion values</div>
+          )}
         </div>
         {/* GPTレスポンス表示用の箱 */}
         <div style={{
@@ -503,7 +503,7 @@ export default function Home() {
               lineHeight: 1.4,
               wordBreak: 'break-word',
             }}>{gptResponse}</div>
-          ) : <span style={{color:'#aaa'}}>ここにGPTレスポンスが表示されます</span>}
+          ) : <span style={{color:'#aaa'}}>AI response will appear here</span>}
         </div>
       </div>
     </div>
