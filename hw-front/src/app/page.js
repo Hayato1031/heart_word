@@ -17,6 +17,10 @@ export default function Home() {
   const [corrosionHistory, setCorrosionHistory] = useState([]);
   const [gptResponse, setGptResponse] = useState("");
   const [virtueResult, setVirtueResult] = useState(null);
+  const beatAudioRef = useRef(null);
+  const noiseAudioRef = useRef(null);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const prevGreenSin = useRef(0);
 
   // ウィンドウリサイズでcanvasサイズを更新
   useEffect(() => {
@@ -124,6 +128,7 @@ export default function Home() {
   let greenPulseBase = 1;
   let greenPulseTarget = 1;
   let greenPulseCooldown = 0;
+  let prevIsFlashing = useRef(false);
 
   const setup = (p5, canvasParentRef) => {
     p5.createCanvas(canvasSize.w, canvasSize.h, p5.WEBGL).parent(canvasParentRef);
@@ -154,14 +159,29 @@ export default function Home() {
     // 緑鼓動: sin波で周期的にスケール変化
     const period = 1200; // 1.2秒周期
     const t = p5.millis() % period;
-    let greenScale = 1 + 1.5 * Math.abs(Math.sin(Math.PI * t / period));
+    let greenSin = Math.sin(Math.PI * t / period);
+    let greenScale = 1 + 1.5 * Math.abs(greenSin);
 
     // 赤点滅時はさらに大きく
     if (flashRef.current) {
       heartScale = 1.9;
       scaleVelocity = 0;
+      // サウンド再生: 赤点滅時はnoise.mp3
+      if (audioEnabled && noiseAudioRef.current) {
+        noiseAudioRef.current.currentTime = 0;
+        noiseAudioRef.current.play();
+      }
       flashRef.current = false;
+    } else {
+      // 緑鼓動の山を超えた瞬間にbeat音
+      if (audioEnabled && beatAudioRef.current && prevGreenSin.current > 0.7 && greenSin <= 0.7) {
+        beatAudioRef.current.currentTime = 0;
+        beatAudioRef.current.play();
+      }
     }
+    prevGreenSin.current = greenSin;
+
+    // heartScaleの補間アニメーションを復元
     let target = isFlashing ? heartScale : greenScale;
     if (heartScale > target) {
       scaleVelocity += (target - heartScale) * 0.13;
@@ -257,8 +277,52 @@ export default function Home() {
     }
   }
 
+  // 音声ON/OFF切り替え時に自動再生許可を得る
+  useEffect(() => {
+    if (audioEnabled) {
+      // ユーザー操作直後であれば再生許可が得られる
+      if (beatAudioRef.current) {
+        beatAudioRef.current.play().then(() => {
+          beatAudioRef.current.pause();
+          beatAudioRef.current.currentTime = 0;
+        }).catch(() => {});
+      }
+      if (noiseAudioRef.current) {
+        noiseAudioRef.current.play().then(() => {
+          noiseAudioRef.current.pause();
+          noiseAudioRef.current.currentTime = 0;
+        }).catch(() => {});
+      }
+    }
+  }, [audioEnabled]);
+
   return (
     <div style={{display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#222', position: 'relative'}}>
+      {/* 音声ON/OFF切り替えボタン（上部中央・目立たないデザイン） */}
+      <button
+        onClick={() => setAudioEnabled(v => !v)}
+        style={{
+          position: 'absolute',
+          top: 18,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(34,34,34,0.5)',
+          color: '#fff',
+          border: '1px solid #888',
+          borderRadius: 16,
+          padding: '4px 18px',
+          fontSize: 15,
+          opacity: 0.65,
+          zIndex: 30,
+          cursor: 'pointer',
+          transition: 'opacity 0.2s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.opacity = 1}
+        onMouseLeave={e => e.currentTarget.style.opacity = 0.65}
+        aria-label={audioEnabled ? 'Sound ON' : 'Sound OFF'}
+      >
+        {audioEnabled ? 'Sound ON' : 'Sound OFF'}
+      </button>
       {/* WebSocketメッセージ表示（左上・全件・新着上・fade-inアニメーション） */}
       <div style={{
         position: 'absolute',
@@ -327,6 +391,8 @@ export default function Home() {
         ) : <span style={{color:'#888'}}>Messages will appear here</span>}
       </div>
       <Sketch setup={setup} draw={draw} windowResized={windowResized} />
+      <audio ref={beatAudioRef} src="/sound/beat.mp3" preload="auto" />
+      <audio ref={noiseAudioRef} src="/sound/noise.mp3" preload="auto" />
       {/* <div style={{marginTop: 20, color: '#fff', fontFamily: 'sans-serif', textAlign: 'center'}}>
         <label htmlFor="smoothnessInput">滑らかさ (1-200): </label>
         <input
