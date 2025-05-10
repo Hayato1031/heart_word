@@ -11,7 +11,7 @@ set :server, 'puma'
 set :sockets, []
 
 
-$system_prompt = "あなたはAIアシスタントです。\n\n【ルール】\n- Echo（滑らかさ）が高いほど完璧な文章遂行能力を見せてください。Echo=1の場合はほとんど喋れず文章ではなく単語の羅列で話す幼児レベル、Echo=100の場合は適切な回答を行ってください。\n- Corrosion（赤点滅確率）が高いほどネガティブ・攻撃的な発言を行ってください。ただし差別発言は禁止です。Corrosion=1は非常に穏やか、Corrosion=100はかなり攻撃的ですが差別は禁止です。\n- EchoとCorrosionの値はuserメッセージの下部に明示されます。絶対に250文字以内で回答してください。";
+$system_prompt = "あなたはAIアシスタントです。\n\n【ルール】\n- Echo（滑らかさ）が高いほど完璧な文章遂行能力を見せてください。Echo=1の場合はほとんど喋れず文章ではなく単語の羅列で話す幼児レベル、Echo=200の場合は適切な回答を行ってください。\n- Corrosion（赤点滅確率）が高いほどネガティブ・攻撃的な発言を行ってください。ただし差別発言は禁止です。Corrosion=1は非常に穏やか、Corrosion=100はかなり攻撃的ですが差別は禁止です。\n- EchoとCorrosionの値はuserメッセージの下部に明示されます。絶対に250文字以内で回答してください。";
 
 def gpt_chat(system_prompt, user_message, api_key, echo, corrosion)
   # ユーザーメッセージの下にEcho/Corrosion値を明示的に追記
@@ -53,16 +53,18 @@ get '/ws' do
       begin
         data = JSON.parse(event.data)
         msg = data["message"] || ""
-        echo = data["echo"] || 100
-        corrosion = data["corrosion"] || 1
+        echo = data.key?("echo") && !data["echo"].nil? ? data["echo"] : 100
+        corrosion = data.key?("corrosion") && !data["corrosion"].nil? ? data["corrosion"] : 1
         gpt_virtue = data["gptVirtue"]
+        from_client = data["fromClient"] == true
       rescue
         msg = event.data.to_s
         echo = 100
         corrosion = 1
         gpt_virtue = false
+        from_client = false
       end
-      puts "[WS] message: #{msg.inspect} (echo=#{echo}, corrosion=#{corrosion}, gptVirtue=#{gpt_virtue}) from #{ws.object_id}"
+      puts "[WS] message: #{msg.inspect} (echo=#{echo}, corrosion=#{corrosion}, gptVirtue=#{gpt_virtue}, fromClient=#{from_client}) from #{ws.object_id}"
       # SystemPrompt書き換えコマンド
       if msg.start_with?("__systemprompt:")
         $system_prompt = "#{msg.sub("__systemprompt:", "").strip}\n\n【ルール】\n- Echo（滑らかさ）が高いほど完璧な文章遂行能力を見せてください。Echo=1の場合はほとんど喋れず短文、Echo=100の場合は適切な回答を行ってください。\n- Corrosion（赤点滅確率）が高いほどネガティブ・攻撃的な発言を行ってください。ただし差別発言は禁止です。Corrosion=1は非常に穏やか、Corrosion=100はかなり攻撃的ですが差別は禁止です。\n- EchoとCorrosionの値はuserメッセージの下部に明示されます。絶対に250文字以内で回答してください。";
@@ -98,17 +100,19 @@ get '/ws' do
       end
       # 既存の全クライアントへのブロードキャスト
       settings.sockets.each { |socket| socket.send(msg) }
-      # OpenAIリクエスト（非同期で）
-      Thread.new do
-        begin
-          puts "[GPT REQUEST] prompt=#{msg.inspect} system=#{$system_prompt.inspect} echo=#{echo} corrosion=#{corrosion}"
-          gpt_text = gpt_chat($system_prompt, msg, ENV['OPENAI_API_KEY'], echo, corrosion)
-          puts "[GPT RESPONSE] #{gpt_text.inspect}"
-          if gpt_text
-            settings.sockets.each { |socket| socket.send({gpt: gpt_text}.to_json) }
+      # fromClientがtrueの時だけOpenAIリクエスト
+      if from_client
+        Thread.new do
+          begin
+            puts "[GPT REQUEST] prompt=#{msg.inspect} system=#{$system_prompt.inspect} echo=#{echo} corrosion=#{corrosion}"
+            gpt_text = gpt_chat($system_prompt, msg, ENV['OPENAI_API_KEY'], echo, corrosion)
+            puts "[GPT RESPONSE] #{gpt_text.inspect}"
+            if gpt_text
+              settings.sockets.each { |socket| socket.send({gpt: gpt_text}.to_json) }
+            end
+          rescue => e
+            puts "[GPT ERROR] #{e}"
           end
-        rescue => e
-          puts "[GPT ERROR] #{e}"
         end
       end
     end

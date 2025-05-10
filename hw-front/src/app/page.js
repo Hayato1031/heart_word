@@ -90,16 +90,20 @@ export default function Home() {
       }
       setWsMessages(msgs => [...msgs.slice(-49), event.data]);
       // メッセージ受信時に緑の箱へ判定中表示
-      setVirtueResult({ message: event.data, result: null, pending: true });
       let msgText = event.data;
+      let isFromClient = false;
       try {
         const data = JSON.parse(event.data);
         if (typeof data.message === 'string') {
           msgText = data.message;
           setVirtueResult({ message: data.message, result: null, pending: true });
+          if (data.fromClient) isFromClient = true;
         }
       } catch {}
-      callGptForVirtue(msgText);
+      // fromClientがtrueなら再送しない
+      if (!isFromClient) {
+        callGptForVirtue(msgText);
+      }
     };
     return () => ws.close();
   }, []);
@@ -112,6 +116,10 @@ export default function Home() {
       }
       return hist;
     });
+    // localStorageにも保存
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('echo', smoothness);
+    }
   }, [smoothness]);
   useEffect(() => {
     setCorrosionHistory(hist => {
@@ -120,6 +128,10 @@ export default function Home() {
       }
       return hist;
     });
+    // localStorageにも保存
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('corrosion', flashProb);
+    }
   }, [flashProb]);
 
   // p5.jsスケッチ内で鼓動アニメーション用の変数を管理
@@ -272,7 +284,10 @@ export default function Home() {
     if (wsRef.current) {
       wsRef.current.send(JSON.stringify({
         message: message,
-        gptVirtue: true
+        gptVirtue: true,
+        echo: smoothness,
+        corrosion: flashProb,
+        fromClient: true
       }));
     }
   }

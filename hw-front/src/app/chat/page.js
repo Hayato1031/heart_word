@@ -22,8 +22,21 @@ export default function ChatPage() {
 
   const handleSend = (e) => {
     e.preventDefault();
+    let echo = 100;
+    let corrosion = 1;
+    if (typeof window !== 'undefined') {
+      const storedEcho = Number(localStorage.getItem('echo'));
+      const storedCorrosion = Number(localStorage.getItem('corrosion'));
+      if (!isNaN(storedEcho)) echo = storedEcho;
+      if (!isNaN(storedCorrosion)) corrosion = storedCorrosion;
+    }
     if (wsRef.current && isWsOpen) {
-      wsRef.current.send(input);
+      wsRef.current.send(JSON.stringify({
+        message: input,
+        echo,
+        corrosion,
+        fromClient: true
+      }));
     } else {
       alert("WebSocket接続中です。少し待ってから再度送信してください。");
     }
@@ -44,49 +57,58 @@ export default function ChatPage() {
       fontFamily: "sans-serif"
     }}>
       <div style={{
-        background: "#222",
-        border: "2px solid #4caf50",
-        borderRadius: 16,
+        background: "rgba(34,34,34,0.96)",
+        border: "1.5px solid #4caf50",
+        borderRadius: 18,
         width: "100%",
-        maxWidth: 480,
-        minHeight: 480,
-        height: 480,
+        maxWidth: 540,
+        minHeight: 540,
+        height: 540,
         display: "flex",
         flexDirection: "column",
-        boxShadow: "0 4px 24px #0008",
+        boxShadow: "0 4px 24px #000a",
         overflow: 'hidden',
+        margin: 24,
       }}>
         <div style={{
           flex: 1,
-          overflowY: "hidden",
-          padding: 24,
+          overflowY: "auto",
+          padding: 28,
           color: "#fff",
-          background: "linear-gradient(120deg, #222 80%, #4caf50 100%)",
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16
+          background: "#222",
+          borderTopLeftRadius: 18,
+          borderTopRightRadius: 18,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
         }}>
           {messages.length === 0 && (
             <div style={{ color: "#aaa", textAlign: "center", marginTop: 80 }}>
-              チャットを始めましょう
+              Start the conversation
             </div>
           )}
           {messages.map((msg, i) => (
             <div key={i} style={{
-              margin: "12px 0",
               display: "flex",
-              justifyContent: msg.from === "user" ? "flex-end" : "flex-start"
+              justifyContent: msg.from === "user" ? "flex-end" : "flex-start",
+              width: '100%',
             }}>
               <div style={{
-                background: msg.from === "user" ? "#4caf50" : "#333",
+                background: msg.from === "user" ? "#4caf50" : "#292929",
                 color: msg.from === "user" ? "#fff" : "#fff",
-                padding: "10px 16px",
-                borderRadius: 16,
-                maxWidth: "70%",
+                padding: "12px 18px",
+                borderRadius: msg.from === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                maxWidth: "80%",
+                minWidth: 36,
                 wordBreak: "break-word",
                 boxShadow: msg.from === "user" ? "0 2px 8px #4caf5055" : "0 2px 8px #0005",
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'break-word',
+                fontSize: msg.from === 'ai' ? 20 : 18,
+                lineHeight: 1.6,
+                margin: msg.from === 'user' ? '0 0 0 32px' : '0 32px 0 0',
+                border: msg.from === 'ai' ? '1.2px solid #4caf50' : undefined,
+                transition: 'background 0.2s',
               }}>
                 {msg.text}
               </div>
@@ -97,38 +119,42 @@ export default function ChatPage() {
         <form onSubmit={handleSend} style={{
           display: "flex",
           borderTop: "1px solid #333",
-          background: "#222",
-          borderBottomLeftRadius: 16,
-          borderBottomRightRadius: 16
+          background: "rgba(34,34,34,0.98)",
+          borderBottomLeftRadius: 18,
+          borderBottomRightRadius: 18,
+          padding: '18px 18px 18px 18px',
+          gap: 12,
         }}>
           <input
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder={isWsOpen ? "メッセージを入力..." : "WebSocket接続中..."}
+            placeholder={isWsOpen ? "Type a message..." : "Connecting to WebSocket..."}
             style={{
               flex: 1,
-              padding: 16,
-              border: "none",
+              padding: 14,
+              border: "1.2px solid #4caf50",
               outline: "none",
-              background: "#222",
+              background: "#232",
               color: "#fff",
-              fontSize: 16,
-              borderBottomLeftRadius: 16
+              fontSize: 18,
+              borderRadius: 12,
+              boxShadow: '0 1px 4px #0005',
+              transition: 'border 0.2s',
             }}
             disabled={!isWsOpen}
           />
           <button type="submit" style={{
-            background: "#4caf50",
+            background: isWsOpen ? "#4caf50" : "#444",
             color: "#fff",
             border: "none",
-            padding: "0 24px",
-            fontSize: 16,
-            borderBottomRightRadius: 16,
+            padding: "0 32px",
+            fontSize: 18,
+            borderRadius: 12,
             cursor: isWsOpen ? "pointer" : "not-allowed",
-            transition: "background 0.2s"
+            transition: "background 0.2s, color 0.2s"
           }} disabled={!isWsOpen}>
-            送信
+            Send
           </button>
         </form>
       </div>
