@@ -1,0 +1,14 @@
+{
+  "name": "lexicore",
+  "version": "0.1.0",
+  "description": "Interactive media art project that responds to words",
+  "scripts": {
+    "dev": "./start.sh",
+    "dev:frontend": "cd lexicore-front && npm run dev",
+    "dev:backend": "cd lexicore-back && bundle exec ruby app.rb",
+    "install:all": "cd lexicore-front && npm install && cd ../lexicore-back && bundle install"
+  },
+  "keywords": ["media-art", "interactive", "websocket", "p5js"],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,4 +1,4 @@
-# hw-front (Sinatra API テンプレート)
+# lexicore-back (Sinatra API テンプレート)
 
 ## セットアップ方法
 
